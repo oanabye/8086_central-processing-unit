@@ -1,0 +1,92 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+
+entity UC is
+    Port (
+    Inst: in std_logic_vector(5 downto 0); --opcode
+    RegDst: out std_logic;
+    ExtOp: out std_logic;
+    RegWrite: out std_logic; 
+    ALUSrc: out std_logic;  
+    Branch: out std_logic;  
+    Jump: out std_logic;  
+    ALUOp: out std_logic_vector(2 downto 0);  
+    MemWrite: out std_logic;  
+    MemtoReg: out std_logic);  
+end UC;
+
+architecture Behavioral of UC is
+begin
+    process(Inst)
+    begin
+        -- Valori implicite
+        RegDst   <= '0';
+        ExtOp    <= '0';
+        RegWrite <= '0';
+        ALUSrc   <= '0';
+        Branch   <= '0';
+        Jump     <= '0';
+        ALUOp    <= "000";
+        MemWrite <= '0';
+        MemtoReg <= '0';
+
+        case Inst is 
+            when "000000" => -- R-type: add, sub, sll, srl, and, or,xor
+                RegDst   <= '1';
+                RegWrite <= '1';
+                ALUOp    <= "000"; -- funct va determina exact operatia
+
+            when "001000" => -- addi
+                RegDst   <= '0';
+                RegWrite <= '1';
+                ALUSrc   <= '1';
+                ExtOp    <= '1';
+                ALUOp    <= "001";
+
+            when "100011" => -- lw
+                RegDst   <= '0';
+                RegWrite <= '1';
+                ALUSrc   <= '1';
+                ExtOp    <= '1';
+                MemtoReg <= '1';
+                ALUOp    <= "001";
+
+            when "101011" => -- sw
+                ALUSrc   <= '1';
+                ExtOp    <= '1';
+                MemWrite <= '1';
+                ALUOp    <= "001";
+
+            when "000100" => -- beq
+                ALUSrc   <= '0';
+                ExtOp    <= '1';
+                Branch   <= '1';
+                ALUOp    <= "010";
+
+            when "000111" => -- bgtz
+                ALUSrc   <= '0';
+                ExtOp    <= '1';
+                Branch   <= '1';
+                ALUOp    <= "100"; -- tratare diferentiata in ALUControl
+
+            when "000101" => -- bne
+                ALUSrc   <= '0';
+                ExtOp    <= '1';
+                Branch   <= '1';
+                ALUOp    <= "101"; -- bne are ALU logic invers fata de beq
+
+            when "001100" => -- andi
+                RegDst   <= '0';
+                RegWrite <= '1';
+                ALUSrc   <= '1';
+                ExtOp    <= '0'; -- zero-extended
+                ALUOp    <= "011";
+
+            when "000010" => -- j
+                Jump <= '1';
+
+            when others =>
+                null;
+        end case;
+    end process;
+end Behavioral;

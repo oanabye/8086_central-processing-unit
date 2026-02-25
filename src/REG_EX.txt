@@ -1,0 +1,92 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.NUMERIC_STD.ALL;
+
+entity REG_EX is
+  Port ( RD1: in STD_LOGIC_VECTOR(31 downto 0);
+         ALUSrc: in STD_LOGIC;
+         RD2: in STD_LOGIC_VECTOR(31 downto 0);
+         Ext_Imm : in STD_LOGIC_VECTOR(31 downto 0);
+         sa : in STD_LOGIC_VECTOR(4 downto 0);
+         func: in STD_LOGIC_VECTOR(5 downto 0);
+         AluOp : in STD_LOGIC_VECTOR(2 downto 0);
+         PC4: in STD_LOGIC_VECTOR(31 downto 0);
+         BranchAddress : out STD_LOGIC_VECTOR(31 downto 0);
+         ALURes : out STD_LOGIC_VECTOR(31 downto 0);
+         Zero : out STD_LOGIC;
+         RegDst : in STD_LOGIC;
+         rd : in STD_LOGIC_VECTOR(4 downto 0);
+         rt : in STD_LOGIC_VECTOR(4 downto 0);
+         rWA : out STD_LOGIC_VECTOR(4 downto 0));
+end REG_EX;
+
+architecture Behavioral of REG_EX is
+signal SIGNALALURes : STD_LOGIC_VECTOR (31 downto 0);
+signal B : STD_LOGIC_VECTOR (31 downto 0);
+signal A : STD_LOGIC_VECTOR (31 downto 0);
+signal addition : STD_LOGIC_VECTOR (31 downto 0);
+signal ALUCtrl : STD_LOGIC_VECTOR (2 downto 0);
+signal isZero : STD_LOGIC;
+begin
+    -- B is RD2 when ALUSrc is '0', otherwise it's Ext_Imm
+    B <= RD2 when ALUSrc = '0' else Ext_Imm;
+    A <= RD1;
+
+    -- ALU Control based on ALUOp and funct
+   ALUControl: process(AluOp, func)
+begin
+    case AluOp is
+        when "000" => -- R type
+            case func is
+                when "100000" => ALUCtrl <= "000"; -- add
+                when "100010" => ALUCtrl <= "001"; -- sub
+                when "000000" => ALUCtrl <= "010"; -- sll
+                when "000010" => ALUCtrl <= "011"; -- srl
+                when "000011" => ALUCtrl <= "111"; -- sra
+                when "100100" => ALUCtrl <= "100"; -- and
+                when "100101" => ALUCtrl <= "101"; -- or
+                when "100110" => ALUCtrl <= "110"; -- xor
+                when others   => ALUCtrl <= (others => 'X');
+            end case;
+        when "001" => ALUCtrl <= "000"; -- addi/lw/sw
+        when "010" => ALUCtrl <= "001"; -- beq/bne
+        when "101" => ALUCtrl <= "001"; -- bne: tot sc?dere ca la beq
+        when "011" => ALUCtrl <= "100"; -- andi
+        when "100" => ALUCtrl <= "001"; -- bgtz
+        when others => ALUCtrl <= (others => 'X');
+    end case;
+end process;
+
+
+    -- ALU Operations
+process(ALUCtrl, A, B, sa)
+begin
+    case ALUCtrl is
+        when "000" =>  SIGNALALURes <= std_logic_vector(unsigned(A) + unsigned(B)); -- add
+        when "001" =>  SIGNALALURes <= std_logic_vector(unsigned(A) - unsigned(B)); -- sub
+        when "010" =>  SIGNALALURes <= std_logic_vector(shift_left(unsigned(RD1), to_integer(unsigned(sa)))); -- sll
+        when "011" =>  SIGNALALURes <= std_logic_vector(shift_right(unsigned(RD1), to_integer(unsigned(sa)))); -- srl
+        when "111" =>  SIGNALALURes <= std_logic_vector(shift_right(signed(RD1), to_integer(unsigned(sa)))); -- sra (shift arithmetic)
+        when "100" =>  SIGNALALURes <= A and B; -- and
+        when "101" =>  SIGNALALURes <= A or B;  -- or
+        when "110" =>  SIGNALALURes <= A xor B; -- xor
+        when others => SIGNALALURes <= (others => 'X');
+    end case;
+end process;
+
+
+
+    -- Branch Address = PC4 + (Ext_Imm << 2)
+    addition <= std_logic_vector(unsigned(PC4) + shift_left(unsigned(Ext_Imm), 2));
+    BranchAddress <= addition;
+
+    -- Zero flag
+    isZero <= '1' when SIGNALALURes = X"00000000" else '0';
+
+    ALURes <= SIGNALALURes;
+    Zero   <= isZero;
+    
+    --rWA
+    rWA <= rt when RegDst='0' else rd;
+
+end Behavioral;

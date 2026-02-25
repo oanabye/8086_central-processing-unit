@@ -1,0 +1,245 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+
+entity test_env is
+    Port ( CLK : in STD_LOGIC;
+           BTN : in STD_LOGIC_VECTOR(1 downto 0);
+           SW : in STD_LOGIC_VECTOR(7 downto 0);
+           LED : out STD_LOGIC_VECTOR(10 downto 0);
+           cat : out STD_LOGIC_VECTOR(6 downto 0);
+           an : out STD_LOGIC_VECTOR(7 downto 0));
+           
+           end test_env;
+
+architecture Behavioral of test_env is
+component MPG is
+    Port ( enable : out STD_LOGIC;
+           btn : in STD_LOGIC;
+           clk : in STD_LOGIC);
+end component;
+
+component IFetch is
+  Port ( CLK : in std_logic;
+         RST : in std_logic;
+         EN : in std_logic;
+         Jump : in std_logic;
+         JumpAddress : in std_logic_vector(31 downto 0);
+         BranchAddress : in std_logic_vector(31 downto 0);
+         PCSrc : in std_logic;
+         Instruction : out std_logic_vector(31 downto 0);
+         PC4 : out std_logic_vector(31 downto 0));
+end component;
+
+component SSD is
+    Port ( clk : in STD_LOGIC;
+           digits : in STD_LOGIC_VECTOR(31 downto 0);
+           an : out STD_LOGIC_VECTOR(7 downto 0);
+           cat : out STD_LOGIC_VECTOR(6 downto 0));
+end component;
+
+component REG_ID is
+  Port (CLK: in STD_LOGIC;
+        EN: in STD_LOGIC;
+        RegWrite : in STD_LOGIC;
+        Instr : in STD_LOGIC_VECTOR(25 downto 0);
+        ExtOp : in STD_LOGIC;
+        WD : in STD_LOGIC_VECTOR(31 downto 0);
+        RD1 : out STD_LOGIC_VECTOR(31 downto 0);
+        RD2 : out STD_LOGIC_VECTOR(31 downto 0);
+        Ext_Imm : out STD_LOGIC_VECTOR(31 downto 0);
+        func : out STD_LOGIC_VECTOR(5 downto 0);
+        sa : out STD_LOGIC_VECTOR(4 downto 0);
+        WA : in STD_LOGIC_VECTOR(4 downto 0);
+        rt : out STD_LOGIC_VECTOR(4 downto 0);
+        rd : out STD_LOGIC_VECTOR(4 downto 0));
+end component;
+
+component REG_EX is
+  Port ( RD1: in STD_LOGIC_VECTOR(31 downto 0);
+         ALUSrc: in STD_LOGIC;
+         RD2: in STD_LOGIC_VECTOR(31 downto 0);
+         Ext_Imm : in STD_LOGIC_VECTOR(31 downto 0);
+         sa : in STD_LOGIC_VECTOR(4 downto 0);
+         func: in STD_LOGIC_VECTOR(5 downto 0);
+         AluOp : in STD_LOGIC_VECTOR(2 downto 0);
+         PC4: in STD_LOGIC_VECTOR(31 downto 0);
+         BranchAddress : out STD_LOGIC_VECTOR(31 downto 0);
+         ALURes : out STD_LOGIC_VECTOR(31 downto 0);
+         Zero : out STD_LOGIC;
+         RegDst : in STD_LOGIC;
+         rd : in STD_LOGIC_VECTOR(4 downto 0);
+         rt : in STD_LOGIC_VECTOR(4 downto 0);
+         rWA : out STD_LOGIC_VECTOR(4 downto 0));
+end component;
+
+component MEM is
+    Port ( MemWrite : in STD_LOGIC;
+           ALUReSin : in STD_LOGIC_VECTOR (31 downto 0);
+           RD2 : in STD_LOGIC_VECTOR (31 downto 0);
+           CLK : in STD_LOGIC;
+           EN : in STD_LOGIC;
+           MemData : out STD_LOGIC_VECTOR (31 downto 0);
+           ALUReSout : out STD_LOGIC_VECTOR (31 downto 0));
+end component;
+
+component UC is
+    Port (
+    Inst: in std_logic_vector(5 downto 0); --opcode
+    RegDst: out std_logic;
+    ExtOp: out std_logic;
+    RegWrite: out std_logic; 
+    ALUSrc: out std_logic;  
+    Branch: out std_logic;  
+    Jump: out std_logic;  
+    ALUOp: out std_logic_vector(2 downto 0);  
+    MemWrite: out std_logic;  
+    MemtoReg: out std_logic);  
+end component;
+
+signal EN : STD_LOGIC;
+signal BranchAddress : STD_LOGIC_VECTOR(31 downto 0);
+signal PCSrc : STD_LOGIC;
+signal JumpAddress : STD_LOGIC_VECTOR(31 downto 0); 
+signal Jump : STD_LOGIC;
+signal Instruction : STD_LOGIC_VECTOR(31 downto 0);
+signal PC4 : STD_LOGIC_VECTOR(31 downto 0);
+signal RegWrite : STD_LOGIC ;
+signal RegDestination : STD_LOGIC;
+signal ExtOp : STD_LOGIC;
+signal WD : STD_LOGIC_VECTOR(31 downto 0);
+signal RD1 : STD_LOGIC_VECTOR(31 downto 0);
+signal RD2 : STD_LOGIC_VECTOR(31 downto 0);
+signal Ext_Imm : STD_LOGIC_VECTOR(31 downto 0);
+signal func : STD_LOGIC_VECTOR(5 downto 0);
+signal sa : STD_LOGIC_VECTOR(4 downto 0);
+signal ALUOp : STD_LOGIC_VECTOR(2 downto 0);
+signal ALUSrc : STD_LOGIC;
+signal ALURes : STD_LOGIC_VECTOR(31 downto 0);
+signal MemData : STD_LOGIC_VECTOR (31 downto 0);
+signal ALUReSout : STD_LOGIC_VECTOR (31 downto 0);
+signal MemWrite : STD_LOGIC;
+signal MemToReg : STD_LOGIC;
+signal Branch : STD_LOGIC;
+signal Zero : STD_LOGIC;
+signal DIGITS : STD_LOGIC_VECTOR(31 downto 0);
+signal rt : STD_LOGIC_VECTOR(4 downto 0);
+signal rd : STD_LOGIC_VECTOR(4 downto 0);
+signal rWA: STD_LOGIC_VECTOR(4 downto 0);
+--IF/ID
+signal Instr_IF_ID: STD_LOGIC_VECTOR(31 downto 0);
+signal PC4_IF_ID: STD_LOGIC_VECTOR(31 downto 0);
+--ID/EX
+signal RegDst_ID_EX: STD_LOGIC;
+signal ALUSrc_ID_EX: STD_LOGIC;
+signal Branch_ID_EX: STD_LOGIC;
+signal ALUOp_ID_EX: STD_LOGIC_VECTOR(2 downto 0);
+signal MemWrite_ID_EX: STD_LOGIC;
+signal MemToReg_ID_EX: STD_LOGIC;
+signal RegWrite_ID_EX: STD_LOGIC;
+signal RD1_ID_EX : STD_LOGIC_VECTOR(31 downto 0);
+signal RD2_ID_EX : STD_LOGIC_VECTOR(31 downto 0);
+signal Ext_Imm_ID_EX : STD_LOGIC_VECTOR(31 downto 0);
+signal func_ID_EX : STD_LOGIC_VECTOR(5 downto 0);
+signal sa_ID_EX : STD_LOGIC_VECTOR(4 downto 0);
+signal rd_ID_EX : STD_LOGIC_VECTOR(4 downto 0);
+signal rt_ID_EX : STD_LOGIC_VECTOR(4 downto 0);
+signal PC4_ID_EX : STD_LOGIC_VECTOR(31 downto 0);
+--EX/MEM
+signal Branch_EX_MEM: STD_LOGIC;
+signal MemWrite_EX_MEM: STD_LOGIC;
+signal MemToReg_EX_MEM: STD_LOGIC;
+signal RegWrite_EX_MEM: STD_LOGIC;
+signal Zero_EX_MEM: STD_LOGIC;
+signal BranchAddress_EX_MEM: STD_LOGIC_VECTOR(31 downto 0);
+signal ALURes_EX_MEM: STD_LOGIC_VECTOR(31 downto 0);
+signal RD2_EX_MEM: STD_LOGIC_VECTOR(31 downto 0);
+signal WA_EX_MEM: STD_LOGIC_VECTOR(4 downto 0);
+--MEM/WB
+signal MemToReg_MEM_WB: STD_LOGIC;
+signal RegWrite_MEM_WB: STD_LOGIC;
+signal ALUResOut_MEM_WB: STD_LOGIC_VECTOR(31 downto 0);
+signal MemData_MEM_WB: STD_LOGIC_VECTOR(31 downto 0);
+signal WA_MEM_WB: STD_LOGIC_VECTOR(4 downto 0);
+
+begin
+
+c1: MPG port map(EN,BTN(0),CLK);
+c2: IFetch port map(CLK,BTN(1),EN,Jump,JumpAddress,BranchAddress_EX_MEM,PCSrc,Instruction,PC4);
+c3: REG_ID port map(CLK,EN,RegWrite_MEM_WB,Instr_IF_ID(25 downto 0),ExtOp,WD,RD1,RD2,Ext_Imm,func,sa,WA_MEM_WB,rt,rd);
+c4: REG_EX port map(RD1_ID_EX,ALUSrc_ID_EX,RD2_ID_EX,Ext_Imm_ID_EX,sa_ID_EX,func_ID_EX,ALUOp_ID_EX,PC4_ID_EX,BranchAddress,ALURes,Zero,RegDst_ID_EX,rd_ID_EX,rt_ID_EX,rWA);
+c5: MEM port map(MemWrite_EX_MEM,ALURes_EX_MEM,RD2_EX_MEM,CLK,EN,MemData,ALUReSout);
+c6: UC port map(Instr_IF_ID(31 downto 26),RegDestination,ExtOp,RegWrite,ALUSrc,Branch,Jump,ALUOp,MemWrite,MemToReg);
+c7: SSD port map(CLK,DIGITS,an,cat);
+
+WD <= ALUResOut_MEM_WB when MemToReg_MEM_WB='0' else MemData_MEM_WB;
+JumpAddress <= PC4_IF_ID(31 downto 28) & Instr_IF_ID(25 downto 0) & "00";
+PCSrc <= Branch_EX_MEM and Zero_EX_MEM;
+
+LED(10 downto 8) <= ALUOp;
+LED(7)<=RegDestination;
+LED(6) <= ExtOp;
+LED(5) <= ALUSrc;
+LED(4) <= Branch;
+LED(3) <= Jump;
+LED(2) <= MemWrite;
+LED(1) <= MemToReg;
+LED(0) <= RegWrite;
+
+process(CLK)
+begin
+    if rising_edge(CLK) then
+        if EN='1' then
+        --IF/ID
+        Instr_IF_ID <= Instruction;
+        PC4_IF_ID <= PC4;
+        --ID/EX
+        RegDst_ID_EX <= RegDestination;
+        ALUSrc_ID_EX <=ALUSrc;
+        Branch_ID_EX <= Branch;
+        ALUOp_ID_EX <= ALUOp;
+        MemWrite_ID_EX <= MemWrite;
+        MemToReg_ID_EX <= MemToReg;
+        RegWrite_ID_EX <= RegWrite;
+        RD1_ID_EX <= RD1;
+        RD2_ID_EX <= RD2;
+        Ext_Imm_ID_EX <= Ext_Imm;
+        func_ID_EX <= func;
+        sa_ID_EX <= sa;
+        rd_ID_EX <= rd;
+        rt_ID_EX <= rt;
+        PC4_ID_EX <= PC4_IF_ID;
+        --EX/MEM
+        Branch_EX_MEM <= Branch_ID_EX;
+        MemWrite_EX_MEM <= MemWrite_ID_EX;
+        MemToReg_EX_MEM <= MemToReg_ID_EX;
+        RegWrite_EX_MEM <= RegWrite_ID_EX;
+        Zero_EX_MEM <= Zero;
+        BranchAddress_EX_MEM <= BranchAddress;
+        ALURes_EX_MEM <= ALURes;
+        WA_EX_MEM <= rWA;
+        RD2_EX_MEM <= RD2_ID_EX;
+        --MEM/WB
+        MemToReg_MEM_WB <= MemToReg_EX_MEM;
+        RegWrite_MEM_WB <= RegWrite_EX_MEM;
+        ALUResOut_MEM_WB <= ALUReSout;
+        MemData_MEM_WB <= MemData;
+        WA_MEM_WB <= WA_EX_MEM;
+        
+        end if;
+    end if;
+end process;
+process(SW(7 downto 5))
+begin
+    case SW(7 downto 5) is
+        when "000" => DIGITS <= Instruction;
+        when "001" => DIGITS <= PC4;
+        when "010" => DIGITS <= RD1_ID_EX;
+        when "011" => DIGITS <= RD2_ID_EX;
+        when "100" => DIGITS <= Ext_Imm_ID_EX;
+        when "101" => DIGITS <= ALURes;
+        when "110" => DIGITS <= MemData;
+        when others => DIGITS <= WD;
+     end case;
+end process;   
+
+end Behavioral;

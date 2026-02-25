@@ -1,0 +1,49 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.std_logic_arith.ALL;
+use IEEE.std_logic_unsigned.ALL;
+
+
+entity MEM is
+    Port ( MemWrite : in STD_LOGIC;
+           ALUReSin : in STD_LOGIC_VECTOR (31 downto 0);
+           RD2 : in STD_LOGIC_VECTOR (31 downto 0);
+           CLK : in STD_LOGIC;
+           EN : in STD_LOGIC;
+           MemData : out STD_LOGIC_VECTOR (31 downto 0);
+           ALUReSout : out STD_LOGIC_VECTOR (31 downto 0));
+end MEM;
+
+architecture Behavioral of MEM is
+signal writeD,ReadD: STD_LOGIC_VECTOR(31 downto 0);
+signal  address: std_logic_vector(5 downto 0);
+signal enable: std_logic;
+type memROM is array(0 to 63) of std_logic_vector(31 downto 0); 
+signal MEM: memROM := (
+        X"00000001", X"00000002", X"00000003", X"00000004",
+        X"00000005", X"00000006", X"00000007", X"00000008",
+        X"00000009", X"0000000A", X"0000000B", X"0000000C",
+        X"0000000D", X"0000000E", X"0000000F", X"00000010",
+        X"00000011", others => X"00000000"
+    );
+
+begin
+
+address <= ALUReSin(7 downto 2); 
+writeD<= RD2;
+enable<= EN; 
+ALUReSOut <= ALUReSin;
+process(clk)
+begin
+    if(rising_edge(clk)) then
+        if enable='1' and MemWrite='1' then
+             MEM(conv_integer(address))<= writeD;
+        end if;
+      end if; 
+    end process;   
+    
+    readD<=MEM(conv_integer(address)); --citire asincrona
+    MemData<= readD;
+    
+     
+end Behavioral;
