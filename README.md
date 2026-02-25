@@ -177,7 +177,6 @@ git clone https://github.com/<your-username>/mips-pipeline-vhdl.git
 
 ---
 
-## 📄 License
+## 👩‍💻 Author
 
-Developed as part of a **Computer Architecture** university course.  
-Free to use for educational and reference purposes.
+**Oana** — [GitHub Profile](https://github.com/oanabye)
